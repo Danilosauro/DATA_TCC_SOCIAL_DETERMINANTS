@@ -5,7 +5,8 @@ install.packages('tidyr')
 install.packages('forcats') 
 install.packages('rio') 
 install.packages('stringr') 
-install.packages('purrr')
+install.packages('purrr') 
+install.packages('fastDummies')
 
 library(dbplyr) 
 library(readxl) 
@@ -15,6 +16,9 @@ library(forcats)
 library(rio) 
 library(stringr) 
 library(purrr)
+library(plm) 
+library(fastDummies)
+
 
 setwd('/home/danilo.dias/R_files/DATA_TCC')
 
@@ -36,26 +40,18 @@ determinantes <- determinantes %>%
 determinantes <- determinantes %>% 
   subset(UF == 'Bahia'| UF == 'Pernambuco' | UF == 'Alagoas' | UF == 'Paraíba' | UF == 'Ceará' | UF == 'Sergipe' | UF == 'Rio Grande do Norte' | UF == 'Maranhão' | UF == 'Piauí')
 
-test <- determinantes %>% 
+determinantes <- determinantes %>% 
   tidyr::pivot_longer(
     cols = !UF,
     names_to = "DETERMINANTES",
     values_to = "SCORE" ) 
 
-test <- test %>% 
+determinantes <- determinantes %>% 
   dplyr::mutate(ano='')
 
-test$ano <- substr(test$DETERMINANTES, nchar(test$DETERMINANTES)-4,nchar(test$DETERMINANTES)) 
-test$ano <- as.numeric(test$ano)
+determinantes$ano <- substr(determinantes$DETERMINANTES, nchar(determinantes$DETERMINANTES)-4,nchar(determinantes$DETERMINANTES)) 
+determinantes$ano <- as.numeric(determinantes$ano)
 
-
-
-ggplot(determinantes, aes(x = UF)) +
-  geom_bar(aes(y = determinantes$`Esperança de vida ao nascer 2012`, fill = "Esperança de vida ao nascer 2012"), stat = "identity", position = "stack", color='lightgreen', fill='grey') + 
-  labs(title = "Esperança de vida ao nascer por Estado em 2012",
-       x = "UF",
-       y = "Esperança de vida ao nascer",
-       fill = "Esperança de vida ao nascer")
 
 # tratamento dos dados de  notificacoes de aids desde 1980 ~ sinan 
 
@@ -76,28 +72,20 @@ aids_data <- aids_data %>%
 aids_data  <- aids_data %>% 
   subset(UF == 'Bahia'| UF == 'Pernambuco' | UF == 'Alagoas' | UF == 'Paraíba' | UF == 'Ceará' | UF == 'Sergipe' | UF == 'Rio Grande do Norte' | UF == 'Maranhão' | UF == 'Piauí') 
 
-test_aids <- aids_data %>% 
+aids_data <- aids_data %>% 
   tidyr::pivot_longer(
     cols = !UF,
     names_to = "CASOS_AIDS",
     values_to = "QUANTIDADE_CASOS_AIDS" ) 
 
-test_aids <- test_aids %>% 
+aids_data <- aids_data %>% 
   dplyr::mutate(ano='') 
 
-test_aids$ano <-substr(test_aids$CASOS_AIDS, nchar(test_aids$CASOS_AIDS)-4,nchar(test_aids$CASOS_AIDS)) 
-test_aids$ano <- as.numeric(test_aids$ano)
+aids_data$ano <-substr(aids_data$CASOS_AIDS, nchar(aids_data$CASOS_AIDS)-4,nchar(aids_data$CASOS_AIDS)) 
+aids_data$ano <- as.numeric(aids_data$ano)
 
-ggplot(aids_data, aes(x = UF)) +
-  geom_bar(aes(y = aids_data$`casos aids 2010`, fill = "casos aids 2010"), stat = "identity", position = "stack", color='lightgreen', fill='grey') + 
-  labs(title = "Número de Casos por UF e Ano",
-       x = "UF",
-       y = "Número de Casos",
-       fill = "Ano") 
 
 # tratamento dos dados de notificacoes de sifilis adquirida desde 2010 ~ sinan 
-rm(sifilis_data)
-
 sifilis_data <- import('SIFILIS_ADQUIRIDA.csv') 
 
 sifilis_data <- sifilis_data %>% 
@@ -119,47 +107,54 @@ sifilis_data <- sifilis_data %>%
 
 sifilis_data$`casos sifilis 2010` <- as.numeric(sifilis_data$`casos sifilis 2010`)
 
-test_sifilis <- sifilis_data %>% 
+sifilis_data <- sifilis_data %>% 
   tidyr::pivot_longer(
     cols = !UF,
     names_to = "CASOS_SIFILIS",
     values_to = "QUANTIDADE_CASOS_SIFILIS" ) 
 
-test_sifilis <- test_sifilis %>% 
+sifilis_data <- sifilis_data %>% 
   dplyr::mutate(ano='')
 
-test_sifilis$ano=substr(test_sifilis$CASOS_SIFILIS, nchar(test_sifilis$CASOS_SIFILIS)-4,nchar(test_sifilis$CASOS_SIFILIS)) 
-test_sifilis$ano <- as.numeric(test_sifilis$ano)
+sifilis_data$ano=substr(sifilis_data$CASOS_SIFILIS, nchar(sifilis_data$CASOS_SIFILIS)-4,nchar(sifilis_data$CASOS_SIFILIS)) 
+sifilis_data$ano <- as.numeric(sifilis_data$ano)
 
 
-# unir dados 
-rm('teste_merged_data')
-
-teste_merged_data <- merge(test_aids, test_sifilis, by=c('UF','ano'))
-teste_merged_data <- merge(teste_merged_data, test, by=c('UF','ano')) 
-
-# merged_data<-  merge(aids_data, sifilis_data, by='UF') 
-# merged_data <- merge(merged_data, determinants, by = 'UF') 
-
-list_data_to_merge <-  list(test, test_aids, test_sifilis)
-
-teste_merged_data <- list_data_to_merge %>% 
-  purrr::reduce(dplyr::inner_join, by='UF') 
+# linkage de dados (merge por UF e ano)
+merged_data <- merge(aids_data, sifilis_data, by=c('UF','ano'))
+merged_data <- merge(merged_data, determinantes, by=c('UF','ano')) 
 
 
+# tratamento do painel de dados 
 
-rm(list_data_to_merge)
+merged_data$DETERMINANTES = substr(merged_data$DETERMINANTES,1,nchar(merged_data$DETERMINANTES)-4) 
 
+merged_data <- merged_data %>%
+  dplyr::mutate_if(is.character, str_trim)
 
-# análises do painel de dados 
+merged_data <- merged_data %>% 
+  dplyr::mutate(factor(ano)) 
 
-summary(merged_data) 
-dplyr::glimpse(merged_data) 
+merged_data <- merged_data %>% 
+  dplyr::select(-ano)
 
+merged_data <- merged_data %>% 
+  dplyr::rename('ANO' = 'factor(ano)')
 
-merged_data <- merged_data %>%  
-  dplyr::mutate_at(c('casos aids 2010', 'casos aids 2011', 'casos aids 2012', 'casos aids 2013', 
-                     'casos aids 2014', 'casos aids 2015', 'casos aids 2016', 'casos aids 2017',
-                     'casos aids 2018', 'casos aids 2019', 'casos aids 2020', 'casos aids 2021'), as.numeric)
+merged_data <- dummy_cols(merged_data, select_columns = 'DETERMINANTES')
 
-dplyr::glimpse(merged_data) 
+merged_data <- merged_data %>% 
+  dplyr::rename('DUMMY_E_V_N' = 'DETERMINANTES_Esperança de vida ao nascer') %>% 
+  dplyr::rename('DUMMY_M_A_E' = 'DETERMINANTES_Média de anos de estudo') %>% 
+  dplyr::rename('DUMMY_R_P_C' = 'DETERMINANTES_Renda per capita')
+
+merged_data <- merged_data %>% 
+  dplyr::glimpse()
+
+############## ajustes necessários 
+
+# Ajuste um modelo de regressão por dados em painel
+modelo_sifilis <- plm(QUANTIDADE_CASOS_SIFILIS ~ SCORE, data = merged_data, model="pooling")
+
+# Visualize os resultados
+summary(modelo_sifilis)
