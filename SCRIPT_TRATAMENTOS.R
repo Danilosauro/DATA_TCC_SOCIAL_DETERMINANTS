@@ -6,7 +6,11 @@ install.packages('forcats')
 install.packages('rio') 
 install.packages('stringr') 
 install.packages('purrr') 
-install.packages('fastDummies')
+install.packages('lmtest', dependencies = TRUE)
+install.packages('plm', dependencies = TRUE)
+install.packages('fastDummies') 
+install.packages('RColorBrewer')
+
 
 library(dbplyr) 
 library(readxl) 
@@ -18,15 +22,15 @@ library(stringr)
 library(purrr)
 library(plm) 
 library(fastDummies)
+library(RColorBrewer)
+
+install_formats()
 
 
-setwd('/home/danilo.dias/R_files/DATA_TCC')
+setwd('/home/danilo.dias/R_files/DATA_TCC') 
+setwd(getwd())
 
-# tratamento dos dados de determinantes sociais ~ atlas do desenvolvimento humano ipea 
-rm(aids_data) 
-rm(determinantes) 
-rm(na_removed_determinantes)
-
+# tratamento dos dados de determinantes sociais ~ atlas do desenvolvimento humano ipea
 determinantes <- read_excel('IPEA_DATA.xlsx') 
 
 na_removed_determinantes <- determinantes %>% 
@@ -40,17 +44,52 @@ determinantes <- determinantes %>%
 determinantes <- determinantes %>% 
   subset(UF == 'Bahia'| UF == 'Pernambuco' | UF == 'Alagoas' | UF == 'Paraíba' | UF == 'Ceará' | UF == 'Sergipe' | UF == 'Rio Grande do Norte' | UF == 'Maranhão' | UF == 'Piauí')
 
-determinantes <- determinantes %>% 
+esperanca_vida_nasc <- determinantes %>% 
+  dplyr::select(starts_with(c('UF', 'Esperança')))
+
+renda_per_capita <- determinantes %>% 
+  dplyr::select(starts_with(c('UF', 'Renda'))) 
+
+media_anos_estudo <- determinantes %>% 
+  dplyr::select(starts_with(c('UF', 'Média')))
+  
+
+esperanca_vida_nasc <- esperanca_vida_nasc %>% 
+  tidyr::pivot_longer(
+    cols = !UF,
+    names_to = "DETERMINANTES",
+    values_to = "SCORE" )  
+
+renda_per_capita <- renda_per_capita %>% 
   tidyr::pivot_longer(
     cols = !UF,
     names_to = "DETERMINANTES",
     values_to = "SCORE" ) 
 
-determinantes <- determinantes %>% 
+media_anos_estudo <- media_anos_estudo %>% 
+  tidyr::pivot_longer(
+    cols = !UF,
+    names_to = "DETERMINANTES",
+    values_to = "SCORE" ) 
+
+media_anos_estudo <- media_anos_estudo %>% 
+  dplyr::mutate(ano='') 
+
+renda_per_capita <- renda_per_capita %>% 
+  dplyr::mutate(ano='') 
+
+esperanca_vida_nasc <- esperanca_vida_nasc %>% 
   dplyr::mutate(ano='')
 
-determinantes$ano <- substr(determinantes$DETERMINANTES, nchar(determinantes$DETERMINANTES)-4,nchar(determinantes$DETERMINANTES)) 
-determinantes$ano <- as.numeric(determinantes$ano)
+media_anos_estudo$ano <- substr(media_anos_estudo$DETERMINANTES, nchar(media_anos_estudo$DETERMINANTES)-4,nchar(media_anos_estudo$DETERMINANTES)) 
+media_anos_estudo$ano <- as.factor(media_anos_estudo$ano) 
+
+
+renda_per_capita$ano <- substr(renda_per_capita$DETERMINANTES, nchar(renda_per_capita$DETERMINANTES)-4,nchar(renda_per_capita$DETERMINANTES)) 
+renda_per_capita$ano <- as.factor(renda_per_capita$ano) 
+
+esperanca_vida_nasc$ano <- substr(esperanca_vida_nasc$DETERMINANTES, nchar(esperanca_vida_nasc$DETERMINANTES)-4,nchar(esperanca_vida_nasc$DETERMINANTES)) 
+esperanca_vida_nasc$ano <- as.factor(esperanca_vida_nasc$ano)
 
 
 # tratamento dos dados de  notificacoes de aids desde 1980 ~ sinan 
@@ -82,7 +121,7 @@ aids_data <- aids_data %>%
   dplyr::mutate(ano='') 
 
 aids_data$ano <-substr(aids_data$CASOS_AIDS, nchar(aids_data$CASOS_AIDS)-4,nchar(aids_data$CASOS_AIDS)) 
-aids_data$ano <- as.numeric(aids_data$ano)
+aids_data$ano <- as.factor(aids_data$ano)
 
 
 # tratamento dos dados de notificacoes de sifilis adquirida desde 2010 ~ sinan 
@@ -117,44 +156,80 @@ sifilis_data <- sifilis_data %>%
   dplyr::mutate(ano='')
 
 sifilis_data$ano=substr(sifilis_data$CASOS_SIFILIS, nchar(sifilis_data$CASOS_SIFILIS)-4,nchar(sifilis_data$CASOS_SIFILIS)) 
-sifilis_data$ano <- as.numeric(sifilis_data$ano)
+sifilis_data$ano <- as.factor(sifilis_data$ano)
 
 
 # linkage de dados (merge por UF e ano)
-merged_data <- merge(aids_data, sifilis_data, by=c('UF','ano'))
-merged_data <- merge(merged_data, determinantes, by=c('UF','ano')) 
+merged_data_esperanca_vida_nasc  <- merge(esperanca_vida_nasc, aids_data, by=c('UF', 'ano'))
+merged_data_esperanca_vida_nasc <- merge(merged_data_esperanca_vida_nasc, sifilis_data, by=c('UF', 'ano'))
 
+
+merged_data_media_anos_est <- merge(media_anos_estudo, aids_data, by=c('UF', 'ano'))
+merged_data_media_anos_est <- merge(merged_data_media_anos_est, sifilis_data, by=c('UF','ano'))
+
+merged_data_renda_per_capita <- merge(renda_per_capita, aids_data, by=c('UF', 'ano'))
+merged_data_renda_per_capita <- merge(merged_data_renda_per_capita, sifilis_data, by=c('UF','ano')) 
+
+
+remove_all <- function(dataframe, ...){  
+  lista <- c(...)
+  dataframe <- dataframe %>% dplyr::select(-lista)
+  }
+
+merged_data_esperanca_vida_nasc <- remove_all(merged_data_esperanca_vida_nasc, 'CASOS_AIDS', 'CASOS_SIFILIS') 
+merged_data_media_anos_est <- remove_all(merged_data_media_anos_est, 'CASOS_AIDS', 'CASOS_SIFILIS') 
+merged_data_renda_per_capita <- remove_all(merged_data_renda_per_capita, 'CASOS_AIDS', 'CASOS_SIFILIS') 
+
+painel_esperanca_vida_nasc <- merged_data_esperanca_vida_nasc
+painel_media_anos_estudo <- merged_data_media_anos_est
+painel_renda_per_capita <- merged_data_renda_per_capita
+
+rm(merged_data_esperanca_vida_nasc, merged_data_media_anos_est,merged_data_renda_per_capita, aids_data, sifilis_data, merged_data, determinantes)
 
 # tratamento do painel de dados 
+paleta_cores <- brewer.pal(n = 9, name = "Set1")
+ggplot(painel_renda_per_capita, aes(x = ano, y = QUANTIDADE_CASOS_AIDS, fill = UF)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_fill_manual(values = paleta_cores) +
+  labs(title = "Quantidade de Casos de AIDS por Estado em Cada Ano",
+       x = "Ano",
+       y = "Quantidade de Casos") +
+  theme_minimal() + 
+  theme(legend.position = "right") 
 
-merged_data$DETERMINANTES = substr(merged_data$DETERMINANTES,1,nchar(merged_data$DETERMINANTES)-4) 
+ggplot(painel_renda_per_capita, aes(x = ano, y = SCORE, fill = UF)) +
+  geom_bar(stat = "identity", position = "dodge") + 
+  scale_fill_manual(values = paleta_cores)
+  labs(title = "Renda per capita dos Estados por ano",
+       x = "Ano",
+       y = "Quantidade de Casos") +
+  theme_minimal() + 
+  theme(legend.position = "right") 
+  
+  
+### tratamento no painel 
+  
+  painel_renda_per_capita <- painel_renda_per_capita %>% 
+    dplyr::rename('RPC' = 'SCORE') 
+  
+  painel_renda_per_capita <- painel_renda_per_capita %>% 
+    dplyr::mutate('M_A_E' = '') 
 
-merged_data <- merged_data %>%
-  dplyr::mutate_if(is.character, str_trim)
+  painel_renda_per_capita$M_A_E <- painel_media_anos_estudo$SCORE
+  
+  painel_renda_per_capita <- painel_renda_per_capita %>% 
+    dplyr::mutate('E_V_N'= '')  
+  
+  painel_renda_per_capita$E_V_N <- painel_esperanca_vida_nasc$SCORE
 
-merged_data <- merged_data %>% 
-  dplyr::mutate(factor(ano)) 
+############## lm
+modelo_regressao_painel_rpc <- lm(QUANTIDADE_CASOS_AIDS ~ M_A_E, data = painel_renda_per_capita)
+summary(modelo_regressao_painel_rpc) 
 
-merged_data <- merged_data %>% 
-  dplyr::select(-ano)
-
-merged_data <- merged_data %>% 
-  dplyr::rename('ANO' = 'factor(ano)')
-
-merged_data <- dummy_cols(merged_data, select_columns = 'DETERMINANTES')
-
-merged_data <- merged_data %>% 
-  dplyr::rename('DUMMY_E_V_N' = 'DETERMINANTES_Esperança de vida ao nascer') %>% 
-  dplyr::rename('DUMMY_M_A_E' = 'DETERMINANTES_Média de anos de estudo') %>% 
-  dplyr::rename('DUMMY_R_P_C' = 'DETERMINANTES_Renda per capita')
-
-merged_data <- merged_data %>% 
-  dplyr::glimpse()
-
-############## ajustes necessários 
-
-# Ajuste um modelo de regressão por dados em painel
+modelo_regressao_multipla_interacoes <- lm(QUANTIDADE_CASOS_SIFILIS ~ RPC * UF + M_A_E * UF + E_V_N * UF, data = painel_renda_per_capita)
+summary(modelo_regressao_multipla_interacoes)
+# Ajuste modelo de regressão por dados em painel
 modelo_sifilis <- plm(QUANTIDADE_CASOS_SIFILIS ~ SCORE, data = merged_data, model="pooling")
 
-# Visualize os resultados
+# resultado
 summary(modelo_sifilis)
