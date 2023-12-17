@@ -31,7 +31,7 @@ path <- getwd()
 setwd(path)
 
 # tratamento dos dados de determinantes sociais ~ atlas do desenvolvimento humano ipea
-determinantes <- read_excel('IPEA_DATA.xlsx')  
+determinantes <- read_excel('DADOS/IPEA_DATA.xlsx')  
 
 determinantes <- determinantes %>% 
   drop_na() 
@@ -91,7 +91,7 @@ esperanca_vida_nasc$ano <- as.factor(esperanca_vida_nasc$ano)
 
 # tratamento dos dados de  notificacoes de aids desde 1980 ~ sinan 
 
-aids_data <- read_excel('DATA_SINAN.xlsx') 
+aids_data <- read_excel('DADOS/DATA_SINAN.xlsx') 
 
 selected_aids_data <- aids_data %>% 
   dplyr::select('UF Notificação','2010', '2011', '2012', '2013', '2014', '2015', '2016', '2017', '2018', '2019', '2020', '2021') 
@@ -121,7 +121,7 @@ aids_data$ano <-substr(aids_data$CASOS_AIDS, nchar(aids_data$CASOS_AIDS)-4,nchar
 aids_data$ano <- as.factor(aids_data$ano)
 
 # tratamento dos dados de notificacoes de sifilis adquirida desde 2010 ~ sinan 
-sifilis_data <- import('SIFILIS_ADQUIRIDA.csv') 
+sifilis_data <- import('DADOS/SIFILIS_ADQUIRIDA.csv') 
 
 sifilis_data <- sifilis_data %>% 
   dplyr::rename('UF' = 'UF de notificao') %>% 
