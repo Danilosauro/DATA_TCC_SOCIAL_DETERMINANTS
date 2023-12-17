@@ -7,9 +7,8 @@ install.packages('rio')
 install.packages('stringr') 
 install.packages('purrr') 
 install.packages('lmtest', dependencies = TRUE)
-install.packages('plm', dependencies = TRUE)
-install.packages('fastDummies') 
-install.packages('RColorBrewer')
+#install.packages('plm', dependencies = TRUE)
+install.packages('RColorBrewer') 
 
 
 library(dbplyr) 
@@ -20,23 +19,22 @@ library(forcats)
 library(rio) 
 library(stringr) 
 library(purrr)
-library(plm) 
+#library(plm) 
 library(fastDummies)
 library(RColorBrewer)
+library(viridis)
+library(gtsummary)
 
 install_formats()
 
-
-setwd('/home/danilo.dias/R_files/DATA_TCC') 
-setwd(getwd())
+path <- getwd()
+setwd(path)
 
 # tratamento dos dados de determinantes sociais ~ atlas do desenvolvimento humano ipea
-determinantes <- read_excel('IPEA_DATA.xlsx') 
+determinantes <- read_excel('IPEA_DATA.xlsx')  
 
-na_removed_determinantes <- determinantes %>% 
+determinantes <- determinantes %>% 
   drop_na() 
-
-determinantes <- na_removed_determinantes 
 
 determinantes <- determinantes %>% 
   dplyr::rename('UF' = 'Territorialidades') 
@@ -84,7 +82,6 @@ esperanca_vida_nasc <- esperanca_vida_nasc %>%
 media_anos_estudo$ano <- substr(media_anos_estudo$DETERMINANTES, nchar(media_anos_estudo$DETERMINANTES)-4,nchar(media_anos_estudo$DETERMINANTES)) 
 media_anos_estudo$ano <- as.factor(media_anos_estudo$ano) 
 
-
 renda_per_capita$ano <- substr(renda_per_capita$DETERMINANTES, nchar(renda_per_capita$DETERMINANTES)-4,nchar(renda_per_capita$DETERMINANTES)) 
 renda_per_capita$ano <- as.factor(renda_per_capita$ano) 
 
@@ -122,7 +119,6 @@ aids_data <- aids_data %>%
 
 aids_data$ano <-substr(aids_data$CASOS_AIDS, nchar(aids_data$CASOS_AIDS)-4,nchar(aids_data$CASOS_AIDS)) 
 aids_data$ano <- as.factor(aids_data$ano)
-
 
 # tratamento dos dados de notificacoes de sifilis adquirida desde 2010 ~ sinan 
 sifilis_data <- import('SIFILIS_ADQUIRIDA.csv') 
@@ -184,50 +180,118 @@ painel_esperanca_vida_nasc <- merged_data_esperanca_vida_nasc
 painel_media_anos_estudo <- merged_data_media_anos_est
 painel_renda_per_capita <- merged_data_renda_per_capita
 
-rm(merged_data_esperanca_vida_nasc, merged_data_media_anos_est,merged_data_renda_per_capita, aids_data, sifilis_data, merged_data, determinantes)
 
-# tratamento do painel de dados 
+painel_data <- painel_renda_per_capita  
+
+# tratamentos no painel
+painel_data <- painel_data %>% 
+  dplyr::rename('RENDA_PER_CAPITA' = 'SCORE') 
+
+painel_data <- painel_data %>% 
+  dplyr::mutate('MEDIA_ANOS_ESTUDO' = '') 
+
+painel_data$MEDIA_ANOS_ESTUDO <- painel_media_anos_estudo$SCORE
+
+painel_data <- painel_data %>%  
+  dplyr::mutate('ESPERANCA_VIDA_NASC'= '') 
+
+painel_data$ESPERANCA_VIDA_NASC <- painel_esperanca_vida_nasc$SCORE 
+
+painel_data <- painel_data %>% 
+  dplyr::select(-DETERMINANTES) 
+
+rm(aids_data, determinantes, esperanca_vida_nasc, media_anos_estudo, merged_data_esperanca_vida_nasc, merged_data_esperanca_vida_nasc, merged_data_media_anos_est, painel_esperanca_vida_nasc, painel_media_anos_estudo, painel_renda_per_capita)
+rm(merged_data_renda_per_capita, renda_per_capita, sifilis_data)
+
+### gráficos
 paleta_cores <- brewer.pal(n = 9, name = "Set1")
-ggplot(painel_renda_per_capita, aes(x = ano, y = QUANTIDADE_CASOS_AIDS, fill = UF)) +
+ggplot(painel_data, aes(x = ano, y = QUANTIDADE_CASOS_AIDS, fill = UF)) +
   geom_bar(stat = "identity", position = "dodge") +
   scale_fill_manual(values = paleta_cores) +
-  labs(title = "Quantidade de Casos de AIDS por Estado em Cada Ano",
+  labs(title = "Quantidade de Casos de AIDS por estado em Cada Ano",
        x = "Ano",
        y = "Quantidade de Casos") +
   theme_minimal() + 
   theme(legend.position = "right") 
 
-ggplot(painel_renda_per_capita, aes(x = ano, y = SCORE, fill = UF)) +
+ggsave("aids_estado_ano.jpg", width = 10, height = 7)
+
+paleta_cores <- brewer.pal(n = 9, name = "Set1")
+ggplot(painel_data, aes(x = ano, y = QUANTIDADE_CASOS_SIFILIS, fill = UF)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_fill_manual(values = paleta_cores) +
+  labs(title = "Quantidade de Casos de SIFILIS por estado em Cada Ano",
+       x = "Ano",
+       y = "Quantidade de Casos") +
+  theme_minimal() + 
+  theme(legend.position = "right")
+
+ggsave("sifilis_estado_ano.jpg", width = 10, height = 7)
+
+ggplot(painel_data, aes(x = ano, y = RENDA_PER_CAPITA, fill = UF)) +
   geom_bar(stat = "identity", position = "dodge") + 
-  scale_fill_manual(values = paleta_cores)
-  labs(title = "Renda per capita dos Estados por ano",
+  scale_fill_manual(values = paleta_cores)+
+  labs(title = "Renda per capita dos estados por ano.",
        x = "Ano",
-       y = "Quantidade de Casos") +
+       y = "Renda per capita") +
   theme_minimal() + 
   theme(legend.position = "right") 
-  
-  
-### tratamento no painel 
-  
-  painel_renda_per_capita <- painel_renda_per_capita %>% 
-    dplyr::rename('RPC' = 'SCORE') 
-  
-  painel_renda_per_capita <- painel_renda_per_capita %>% 
-    dplyr::mutate('M_A_E' = '') 
+ggsave("rpc_estado_ano.jpg", width = 10, height = 7)
 
-  painel_renda_per_capita$M_A_E <- painel_media_anos_estudo$SCORE
-  
-  painel_renda_per_capita <- painel_renda_per_capita %>% 
-    dplyr::mutate('E_V_N'= '')  
-  
-  painel_renda_per_capita$E_V_N <- painel_esperanca_vida_nasc$SCORE
+ggplot() +
+  geom_bar(data=painel_data ,aes(x=ano,y=RENDA_PER_CAPITA, fill=UF),stat="identity",position = position_dodge(), alpha = 0.75)+
+  labs(title="RENDA PER CAPITA DOS ESTADOS POR ANO", 
+       x="ANO",y="RENDA PER CAPITA",fill="")
 
-############## lm
+grafico_disp_com_linha_tendencia <- ggplot(painel_data, aes(x = RENDA_PER_CAPITA, y = MEDIA_ANOS_ESTUDO)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Relação entre Renda Per Capita e Escolaridade Média",
+       x = "Renda Per Capita",
+       y = "Escolaridade Média")
+
+print(grafico_disp_com_linha_tendencia) 
+ggsave("TENDENCIA.jpg", width = 10, height = 7) 
+
+grafico_disp_com_linha_tendencia <- ggplot(painel_data, aes(x = RENDA_PER_CAPITA, y = ESPERANCA_VIDA_NASC)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Relação entre Renda Per Capita e Esperança de vida ao nascer",
+       x = "Renda Per Capita",
+       y = "Esperança de vida ao nascer") 
+grafico_disp_com_linha_tendencia 
+ggsave("rpc_evn.jpg", width=10, height=7) 
+
+ggplot(painel_data, aes(x = ano, y = QUANTIDADE_CASOS_AIDS)) +
+  geom_line() +
+  labs(title = "Evolução dos Casos de AIDS ao Longo do Tempo",
+       x = "Ano",
+       y = "Casos de AIDS")
+ggsave("casos_aids_tempo.jpg", width=10, height=7) 
+
+ggplot(painel_data, aes(x = ano, y = QUANTIDADE_CASOS_SIFILIS)) +
+  geom_line() +
+  labs(title = "Evolução dos Casos de SIFILIS ao Longo do Tempo",
+       x = "Ano",
+       y = "Casos de AIDS")
+ggsave("casos_sifilis_tempo.jpg", width=10, height=7)
+
+
+## tabelas
+painel_data %>%
+  tbl_summary(include = c(RENDA_PER_CAPITA, ESPERANCA_VIDA_NASC, MEDIA_ANOS_ESTUDO, QUANTIDADE_CASOS_AIDS, QUANTIDADE_CASOS_SIFILIS)) %>% 
+  modify_header(label = "**Variable**") 
+
+painel_data %>%
+  tbl_summary(UF)
+
+## lm
 modelo_regressao_painel_rpc <- lm(QUANTIDADE_CASOS_AIDS ~ M_A_E, data = painel_renda_per_capita)
 summary(modelo_regressao_painel_rpc) 
 
 modelo_regressao_multipla_interacoes <- lm(QUANTIDADE_CASOS_SIFILIS ~ RPC * UF + M_A_E * UF + E_V_N * UF, data = painel_renda_per_capita)
-summary(modelo_regressao_multipla_interacoes)
+summary(modelo_regressao_multipla_interacoes) 
+
 # Ajuste modelo de regressão por dados em painel
 modelo_sifilis <- plm(QUANTIDADE_CASOS_SIFILIS ~ SCORE, data = merged_data, model="pooling")
 
