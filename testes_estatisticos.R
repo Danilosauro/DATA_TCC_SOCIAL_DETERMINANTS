@@ -1,3 +1,5 @@
+## avaliações em painel
+
 ## modelos linear  ~ glm 
 model <- lm(QUANTIDADE_CASOS_AIDS ~ MEDIA_ANOS_ESTUDO, data = alagoas) 
 summary(model)
@@ -22,3 +24,7 @@ modelo_aids <- plm(QUANTIDADE_CASOS_AIDS ~ RENDA_PER_CAPITA + MEDIA_ANOS_ESTUDO 
 summary(modelo_aids) 
 
 summary(fixef(modelo_sifilis))
+
+
+## avaliações individualizadas para os estados 
+
