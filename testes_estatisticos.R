@@ -46,13 +46,27 @@ generate_panel_data_model_sifilis(sergipe)
 
 # Ajuste modelo de regressão por dados em painel por efeitos fixos para o dataset completo
 
-modelo_sifilis <- plm(QUANTIDADE_CASOS_SIFILIS ~ RENDA_PER_CAPITA + MEDIA_ANOS_ESTUDO + ESPERANCA_VIDA_NASC, data = painel_data, model="within")
-summary(modelo_sifilis) 
+modelo_sifilis_ef <- plm(QUANTIDADE_CASOS_SIFILIS ~ RENDA_PER_CAPITA + MEDIA_ANOS_ESTUDO + ESPERANCA_VIDA_NASC, data = painel_data, model="within")
+summary(modelo_sifilis_ef)  
 
-summary(fixef(modelo_sifilis)) 
+modelo_sifilis_ea <- plm(QUANTIDADE_CASOS_SIFILIS ~ RENDA_PER_CAPITA + MEDIA_ANOS_ESTUDO + ESPERANCA_VIDA_NASC, data = painel_data, model="random")
+summary(modelo_sifilis_ea) 
+
+## com a aplicação do teste de hausman, obtivemos como resultado que o modelo mais adequado é o de efeitos aleatórios.
+
+phtest(modelo_sifilis_ef, modelo_sifilis_ea)
+
+summary(fixef(modelo_sifilis_ef)) 
+
+modelo_aids_ef <- plm(QUANTIDADE_CASOS_AIDS ~ RENDA_PER_CAPITA + MEDIA_ANOS_ESTUDO + ESPERANCA_VIDA_NASC, data = painel_data, model = 'within')
+summary(modelo_aids_ef) 
+
+modelo_aids_ea <- plm(QUANTIDADE_CASOS_AIDS ~ RENDA_PER_CAPITA + MEDIA_ANOS_ESTUDO + ESPERANCA_VIDA_NASC, data = painel_data, model = 'random') 
+summary(modelo_aids_ea)
+
+## com a aplicação do teste de hausman, obtivemos como resultado que o modelo mais adequado é o de efeitos aleatórios.
+
+phtest(modelo_aids_ef, modelo_aids_ea)
 
 
-modelo_aids <- plm(QUANTIDADE_CASOS_AIDS ~ RENDA_PER_CAPITA + MEDIA_ANOS_ESTUDO + ESPERANCA_VIDA_NASC, data = painel_data, model = 'within') 
-summary(modelo_aids) 
-
-summary(fixef(modelo_sifilis))
+summary(fixef(modelo_aids_ef))

@@ -143,6 +143,9 @@ painel_data %>%
 painel_data %>%
   tbl_summary(UF) 
 
+library(gt)
+
+painel_data %>% gt()
 
 # plots resíduos modelo generalizado (toda a região nordeste) 
 library(ggplot2)

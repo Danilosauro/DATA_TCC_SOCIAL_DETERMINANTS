@@ -28,7 +28,7 @@ library(plm)
 
 install_formats()
 
-setwd('/home/danilo.dias/R_files/DATA_TCC_SOCIAL_DETERMINANTS')
+setwd('/home/danilo/Documentos/TCC_MBA/DATA_TCC_SOCIAL_DETERMINANTS')
 
 # tratamento dos dados de determinantes sociais ~ atlas do desenvolvimento humano ipea
 determinantes <- read_excel('DADOS/IPEA_DATA.xlsx')  
