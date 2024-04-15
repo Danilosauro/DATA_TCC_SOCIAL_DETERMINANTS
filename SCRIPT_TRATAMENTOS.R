@@ -9,7 +9,7 @@ install.packages('purrr')
 install.packages('lmtest', dependencies = TRUE)
 install.packages('plm', dependencies = TRUE)
 install.packages('RColorBrewer') 
-
+install.packages('gt', dependencies = TRUE)
 
 
 library(dbplyr) 
@@ -22,7 +22,8 @@ library(stringr)
 library(purrr)
 library(fastDummies)
 library(RColorBrewer) 
-library(plm)
+library(plm) 
+library(gt)
 #library(viridis)
 #library(gtsummary)
 

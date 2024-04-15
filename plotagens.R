@@ -212,3 +212,21 @@ for (estado in names(resultados_por_estado)) {
   ggsave(paste("/GRAFICOS/esperanca_vida_nasc_x_residuos_estado", estado, ".png", sep = ""), plot = last_plot())
   
 }
+
+
+# tabelas  
+
+
+tabela_painel <- gt(painel_data)
+tabela_painel 
+ 
+gtsave(tabela_painel, filename = "/home/danilo/Documentos/TCC_MBA/DATA_TCC_SOCIAL_DETERMINANTS/TABELAS/tabela_resultados.png")
+
+
+estatisticas_modelo_sifilis_ea <- summary(modelo_sifilis_ea)
+estatisticas_modelo_aids_ea <- summary(modelo_aids_ea) 
+
+gt(as.data.frame(estatisticas_modelo_sifilis_ea$coefficients), gt::)
+gt(as.data.frame(estatisticas_modelo_aids_ea$coefficients)) 
+
+
